@@ -16,12 +16,14 @@
     "upgrade:dry": "npx @strapi/upgrade latest --dry"
   },
   "dependencies": {
+    "@strapi/provider-upload-aws-s3": "5.36.1",
     "@strapi/plugin-cloud": "5.36.1",
     "@strapi/plugin-users-permissions": "5.36.1",
     "@strapi/strapi": "5.36.1",
     "fs-extra": "^10.0.0",
     "mime-types": "^2.1.27",
     "mysql2": "3.9.8",
+    "pg": "^8.16.3",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-router-dom": "^6.0.0",
