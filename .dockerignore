@@ -4,3 +4,6 @@ node_modules
 build
 .tmp
 .DS_Store
+.env
+.env.*
+!.env.example

@@ -1,17 +1,25 @@
 import type { Core } from '@strapi/strapi';
 
-const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Database => {
-  const connection = {
-    connectionString: env('DATABASE_URL'),
-    ssl: env.bool('DATABASE_SSL', true) && {
-      rejectUnauthorized: false,
-    },
-  } as unknown as Core.Config.Database['connection']['connection'];
+const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Database<'postgres'> => {
+  const ssl = env.bool('DATABASE_SSL', true)
+    ? {
+        rejectUnauthorized: env.bool('DATABASE_SSL_REJECT_UNAUTHORIZED', true),
+      }
+    : false;
 
   return {
     connection: {
       client: 'postgres',
-      connection,
+      connection: {
+        host: env('DATABASE_HOST', 'localhost'),
+        port: env.int('DATABASE_PORT', 5432),
+        database: env('DATABASE_NAME', 'strapi'),
+        user: env('DATABASE_USERNAME', 'strapi'),
+        password: env('DATABASE_PASSWORD', 'strapi'),
+        connectionString: env('DATABASE_URL'),
+        ssl,
+        schema: env('DATABASE_SCHEMA', 'public'),
+      },
     },
   };
 };
