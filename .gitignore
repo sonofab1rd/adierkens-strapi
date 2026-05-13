@@ -130,3 +130,5 @@ build
 .strapi-updater.json
 .strapi-cloud.json
 copilot-instructions.md
+.worktrees
+worktrees
