@@ -1,61 +1,97 @@
-# 🚀 Getting started with Strapi
+# adierkens-strapi
 
-Strapi comes with a full featured [Command Line Interface](https://docs.strapi.io/dev-docs/cli) (CLI) which lets you scaffold and manage your project in seconds.
+Strapi backend for `api.adierkens.com`.
 
-### `develop`
+## Local development
 
-Start your Strapi application with autoReload enabled. [Learn more](https://docs.strapi.io/dev-docs/cli#strapi-develop)
+Install dependencies and run Strapi locally:
 
-```
+```bash
+npm install
 npm run develop
-# or
-yarn develop
 ```
 
-### `start`
+Build or start the production app:
 
-Start your Strapi application with autoReload disabled. [Learn more](https://docs.strapi.io/dev-docs/cli#strapi-start)
-
-```
-npm run start
-# or
-yarn start
-```
-
-### `build`
-
-Build your admin panel. [Learn more](https://docs.strapi.io/dev-docs/cli#strapi-build)
-
-```
+```bash
 npm run build
-# or
-yarn build
+npm run start
 ```
 
-## ⚙️ Deployment
+Health endpoint:
 
-Strapi gives you many possible deployment options for your project including [Strapi Cloud](https://cloud.strapi.io). Browse the [deployment section of the documentation](https://docs.strapi.io/dev-docs/deployment) to find the best solution for your use case.
-
-```
-yarn strapi deploy
+```bash
+curl http://localhost:1337/health
 ```
 
-## 📚 Learn more
+## Production deployment
 
-- [Resource center](https://strapi.io/resource-center) - Strapi resource center.
-- [Strapi documentation](https://docs.strapi.io) - Official Strapi documentation.
-- [Strapi tutorials](https://strapi.io/tutorials) - List of tutorials made by the core team and the community.
-- [Strapi blog](https://strapi.io/blog) - Official Strapi blog containing articles made by the Strapi team and the community.
-- [Changelog](https://strapi.io/changelog) - Find out about the Strapi product updates, new features and general improvements.
+The backend runs on AWS ECS Fargate behind the shared `adierkens-prod` Application Load Balancer and uses Amazon RDS PostgreSQL plus Amazon S3 for uploads.
 
-Feel free to check out the [Strapi GitHub repository](https://github.com/strapi/strapi). Your feedback and contributions are welcome!
+### AWS resources
 
-## ✨ Community
+- **ECR repository:** `adierkens-strapi-backend`
+- **ECS cluster:** `adierkens-prod`
+- **ECS service:** `adierkens-strapi-backend`
+- **Task definition family:** `adierkens-strapi-backend`
+- **Public hostname:** `https://api.adierkens.com`
+- **RDS instance:** `adierkens-strapi-db`
+- **S3 bucket:** `adierkens-strapi-media-429178716268-us-east-1`
 
-- [Discord](https://discord.strapi.io) - Come chat with the Strapi community including the core team.
-- [Forum](https://forum.strapi.io/) - Place to discuss, ask questions and find answers, show your Strapi project and get feedback or just talk with other Community members.
-- [Awesome Strapi](https://github.com/strapi/awesome-strapi) - A curated list of awesome things related to Strapi.
+### Required runtime configuration
 
----
+The ECS task expects these runtime values:
 
-<sub>🤫 Psst! [Strapi is hiring](https://strapi.io/careers).</sub>
+- `NODE_ENV=production`
+- `HOST=0.0.0.0`
+- `PORT=1337`
+- `DATABASE_URL`
+- `DATABASE_SSL=true`
+- `DATABASE_SSL_REJECT_UNAUTHORIZED=false` for the current RDS deployment
+- `APP_KEYS`
+- `API_TOKEN_SALT`
+- `ADMIN_JWT_SECRET`
+- `TRANSFER_TOKEN_SALT`
+- `JWT_SECRET`
+- `AWS_REGION`
+- `AWS_BUCKET`
+
+Secrets are stored in AWS Secrets Manager and injected into ECS at runtime.
+
+### GitHub Actions deployment flow
+
+`.github/workflows/deploy-backend.yml` runs on pushes to `main` and:
+
+1. installs dependencies
+2. builds the Strapi project
+3. builds and pushes the Docker image to ECR
+4. registers a new ECS task definition revision
+5. updates the ECS service
+
+The workflow uses GitHub OIDC with the `AWS_ROLE_TO_ASSUME` secret.
+
+Repository variables used by the workflow:
+
+- `AWS_REGION`
+- `ECR_REPOSITORY`
+- `ECS_CLUSTER`
+- `ECS_SERVICE`
+- `ECS_TASK_DEFINITION`
+- `ECS_CONTAINER_NAME`
+
+### Rollback
+
+To roll back the backend:
+
+1. identify the last known-good task definition revision
+2. point the ECS service back to that revision
+
+Example:
+
+```bash
+aws ecs update-service \
+  --region us-east-1 \
+  --cluster adierkens-prod \
+  --service adierkens-strapi-backend \
+  --task-definition adierkens-strapi-backend:<revision>
+```
